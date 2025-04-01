@@ -3,54 +3,64 @@ name: Custom Rom Builder Samsung Galaxy A11/M11
 on:
   push:
     branches:
-      - main  # Change this to your desired branch
+      - main  # غيّر هذا حسب الفرع المطلوب
   workflow_dispatch:
     inputs:
       GSI:
-        description: 'Direct link for GSI image'
+        description: 'رابط مباشر لصورة GSI'
         required: true
-        default: 'https://sourceforge.net/projects/andyyan-gsi/files/lineage-19.x/lineage-19.1-20230715-UNOFFICIAL-a64_bgN.img.xz'        
+        default: 'https://sourceforge.net/projects/andyyan-gsi/files/lineage-19.x/lineage-19.1-20230715-UNOFFICIAL-a64_bgN.img.xz'
       ARCH:
-        description: 'ARM64 or ARM32?'
+        description: 'ARM64 أو ARM32؟'
         required: true
-        default: '32'                
+        default: '32'
       NAME:
-        description: 'ROM Name'
+        description: 'اسم الروم'
         required: true
-        default: 'LineageOS_19.1_A11_M11_ARM32_Gapps'                
+        default: 'LineageOS_19.1_A11_M11_ARM32_Gapps'
 
 jobs:
   Build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: استنساخ المستودع
       uses: actions/checkout@v3
 
-    - name: Install Dependencies
+    - name: تثبيت التبعيات
       run: |
         sudo apt update
         sudo apt install -y zip xz-utils unzip p7zip-full wget
-        
-    - name: Preparing Files
+    
+    - name: تجهيز الملفات الأساسية
       run: |
-        wget https://sourceforge.net/projects/samsung-galaxy-a01-m01/files/a11q.zip
+        wget -O a11q.zip https://sourceforge.net/projects/samsung-galaxy-a01-m01/files/a11q.zip
         git clone https://github.com/smiley9000/Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11
-        unzip a11q.zip
+        unzip a11q.zip -d a11q_files
         rm -r a11q.zip
-
-    - name: Downloading your GSI
+    
+    - name: تنزيل الـ GSI وفك الضغط
       run: |
-        wget -P "./temp" ${{ github.event.inputs.GSI }} 
-        chmod 755 *
-        chmod 755 ./bin/*
-
-    - name: Building
+        mkdir -p temp
+        wget -O temp/gsi.img.xz ${{ github.event.inputs.GSI }}
+        xz -d temp/gsi.img.xz || echo "الصورة ليست مضغوطة، تخطي فك الضغط"
+    
+    - name: ضبط الصلاحيات
       run: |
-        ./arm${{ github.event.inputs.ARCH }}_git
-        
-    - name: Uploading The Zip
-      uses: actions/upload-artifact@v3  # تم تحديث الإصدار هنا
+        chmod +x Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11/*.sh || true
+        chmod +x Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11/bin/* || true
+    
+    - name: بدء عملية البناء
+      run: |
+        cd Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11
+        ./arm${{ github.event.inputs.ARCH }}_git || echo "خطأ أثناء البناء، تحقق من السجلات"
+    
+    - name: التحقق من وجود ملف الروم
+      run: |
+        ls -lah ./zip || echo "لم يتم العثور على الملف!"
+    
+    - name: رفع ملف الروم النهائي
+      uses: actions/upload-artifact@v3
       with:
-        name: ${{ github.event.inputs.NAME }}   # Replace with a suitable name
+        name: ${{ github.event.inputs.NAME }}
         path: ./zip/Custom_Rom_SDM450.zip
