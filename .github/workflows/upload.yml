@@ -1,21 +1,21 @@
-name: Custom Rom Builder Samsung Galaxy A11/M11
+name: Custom ROM Builder Samsung Galaxy A11/M11
 
 on:
   push:
     branches:
-      - main  # غيّر هذا حسب الفرع المطلوب
+      - main  # Change this according to the desired branch
   workflow_dispatch:
     inputs:
       GSI:
-        description: 'رابط مباشر لصورة GSI'
+        description: 'Direct link to GSI image'
         required: true
         default: 'https://sourceforge.net/projects/andyyan-gsi/files/lineage-19.x/lineage-19.1-20230715-UNOFFICIAL-a64_bgN.img.xz'
       ARCH:
-        description: 'ARM64 أو ARM32؟'
+        description: 'ARM64 or ARM32?'
         required: true
         default: '32'
       NAME:
-        description: 'اسم الروم'
+        description: 'ROM name'
         required: true
         default: 'LineageOS_19.1_A11_M11_ARM32_Gapps'
 
@@ -24,42 +24,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: استنساخ المستودع
+    - name: Clone repository
       uses: actions/checkout@v3
 
-    - name: تثبيت التبعيات
+    - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y zip xz-utils unzip p7zip-full wget
     
-    - name: تجهيز الملفات الأساسية
+    - name: Prepare base files
       run: |
         wget -O a11q.zip https://sourceforge.net/projects/samsung-galaxy-a01-m01/files/a11q.zip
         git clone https://github.com/smiley9000/Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11
         unzip a11q.zip -d a11q_files
         rm -r a11q.zip
     
-    - name: تنزيل الـ GSI وفك الضغط
+    - name: Download and extract GSI
       run: |
         mkdir -p temp
         wget -O temp/gsi.img.xz ${{ github.event.inputs.GSI }}
-        xz -d temp/gsi.img.xz || echo "الصورة ليست مضغوطة، تخطي فك الضغط"
+        xz -d temp/gsi.img.xz || echo "Image is not compressed, skipping extraction"
     
-    - name: ضبط الصلاحيات
+    - name: Set permissions
       run: |
         chmod +x Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11/*.sh || true
         chmod +x Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11/bin/* || true
     
-    - name: بدء عملية البناء
+    - name: Start build process
       run: |
         cd Custom-Rom-Builder-For-Samsung-Galaxy-A11-M11
-        ./arm${{ github.event.inputs.ARCH }}_git || echo "خطأ أثناء البناء، تحقق من السجلات"
+        ./arm${{ github.event.inputs.ARCH }}_git || echo "Error during build, check logs"
     
-    - name: التحقق من وجود ملف الروم
+    - name: Verify ROM file existence
       run: |
-        ls -lah ./zip || echo "لم يتم العثور على الملف!"
+        ls -lah ./zip || echo "File not found!"
     
-    - name: رفع ملف الروم النهائي
+    - name: Upload final ROM file
       uses: actions/upload-artifact@v4
       with:
         name: ${{ github.event.inputs.NAME }}
